@@ -1,40 +1,41 @@
-import zipfile
 import os
+import zipfile
 import csv
+import logging  
+
+logging.basicConfig(filename='sub_zip_access.log', level=logging.INFO)
 
 class FileHandler:
     def __init__(self, zip_file_path):
         self.zip_file_path = zip_file_path
         self.sub_zip_files = []
+        self.xml_files = []
 
-    def read_main_zip(self):
-     
+    def find_sub_zip_files(self):
         with zipfile.ZipFile(self.zip_file_path, 'r') as main_zip:
-            self.sub_zip_files = [name for name in main_zip.namelist() if name.endswith('.zip')]
-            print("Sub ZIP files found:")
-            for sub_zip in self.sub_zip_files:
-                print(f"- {sub_zip}")
+            for item in main_zip.namelist():
+                if item.endswith('.zip'):
+                    self.sub_zip_files.append(item)
+                    print(f"Found ZIP file: {item}")
 
-    def export_to_csv(self, output_file_path):
-        with open(output_file_path, mode='w', newline='') as csv_file:
-            writer = csv.writer(csv_file)
-            writer.writerow(['Sub ZIP Files']) 
-            for sub_zip in self.sub_zip_files:
-                writer.writerow([sub_zip])  
+    def access_sub_zip_files(self):
+        if not self.sub_zip_files:
+            print("No sub ZIP files found.")
+            return
 
-if __name__ == "__main__":
-    zip_file_path = input(r"Enter the path to the main ZIP file: ")
+        sub_zip = self.sub_zip_files[0]
+        sub_zip_path = input(f"Enter the path for sub ZIP file '{sub_zip}': ")
 
-    if not os.path.isfile(zip_file_path) or not zip_file_path.endswith('.zip'):
-        print("Invalid file path. Please provide a valid ZIP file.")
-    else:
-        file_handler = FileHandler(zip_file_path)
-        file_handler.read_main_zip()
+        if not os.path.exists(sub_zip_path):
+            print(f"File not found: {sub_zip_path}")
+            return  
 
-        print(f"Total sub ZIP files found: {len(file_handler.sub_zip_files)}")
-        for sub_zip in file_handler.sub_zip_files:
-            print(f"Sub ZIP: {sub_zip}")
+        print(f"Accessing {sub_zip} from {sub_zip_path}...")
+        
 
-        output_file_path = input("Enter the output CSV file name (e.g., output.csv): ")
-        file_handler.export_to_csv(output_file_path)
-        print(f"Exported to {output_file_path} successfully.")
+        with zipfile.ZipFile(sub_zip_path, 'r') as nested_zip:
+            print(f"Files in {sub_zip}:")
+            for file in nested_zip.namelist():
+                print(f" - {file}")
+                self.xml_files.append((sub_zip, file))
+                logging.info(f"Accessed file '{file}' from sub ZIP '{sub_zip}'.")
